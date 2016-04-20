@@ -52,7 +52,7 @@ my $dispatch = {
       serialSequence => [139,'LED Bits','Clean/Power Color','Clean/Power Intensity'],
       minMode => 'Safe',
       dataRange => [[0,15],[0,255],[0,255]],
-      codes => ['Debris','Spot','Dock','Check Robot'],
+      code => ['Debris','Spot','Dock','Check Robot'],
    },
    SeekDock => {
       serialSequence => [143],
@@ -62,6 +62,22 @@ my $dispatch = {
    DriveDirect => {
       serialSequence => [145,'Right velocity high byte','Right velocity low byte','Left velocity high byte','Left velocity low byte'],
       minMode => 'Safe'
+   },
+   Schedule => {
+      serialSequence => [167,'Days','Sun Hour','Sun Minute','Mon Hour','Mon Minute','Tue Hour','Tue Minute','Wed Hour','Wed Minute','Thu Hour','Thu Minute','Fri Hour','Fri Minute','Sat Hour','Sat Minute'],
+      minMode => 'Passive',
+      dataRange => [[0,127],[0,23],[0,59],[0,23],[0,59],[0,23],[0,59],[0,23],[0,59],[0,23],[0,59],[0,23],[0,59],[0,23],[0,59]],
+      code => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+   },
+   SetDayTime => {
+      serialSequence => [168,'Day','Hour','Minute'],
+      minMode => 'Passive',
+      code => ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+   },
+   Power => {
+      serialSequence => [133],
+      minMode => 'Passive',
+      setMode => 'Passive'
    }
 };
 
