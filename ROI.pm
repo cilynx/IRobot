@@ -48,6 +48,11 @@ my $dispatch = {
       minMode => 'Passive',
       setMode => 'Passive'
    },
+   Drive => {
+      serialSequence => [137,'Velocity high byte','Velocity low byte','Radius high byte','Radius low byte'],
+      minMode => 'Safe',
+      dataRange => [[-255,255],[-255,255],[-255,255],[-255,255]]
+   },
    LEDs => {
       serialSequence => [139,'LED Bits','Clean/Power Color','Clean/Power Intensity'],
       minMode => 'Safe',
