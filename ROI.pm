@@ -170,7 +170,7 @@ my $sensors = {
    },
    Temperature => {
       packetId => 24,
-      dataBytes => 2,
+      dataBytes => 1,
       signed => 1
    },
    BatteryCharge => {
@@ -406,9 +406,14 @@ sub AUTOLOAD
    # Verify Command Validity
    unless($dispatch->{$command})
    {
-      print "Unknown command: $command\n";
-      print "IRobot::ROI->AUTOLOAD($command) PUNT\n" if $self->{debug};
-      return(0);
+      if($sensors->{$command}) {
+	 @dataBytes = ($sensors->{$command}->{packetId});
+	 $command = 'Sensors';
+      } else {
+	 print "Unknown command: $command\n";
+	 print "IRobot::ROI->AUTOLOAD($command) PUNT\n" if $self->{debug};
+	 return(0);
+      }
    }
 
    my $opCode = ${$dispatch->{$command}->{serialSequence}}[0];
