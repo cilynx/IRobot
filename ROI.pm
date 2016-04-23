@@ -529,6 +529,13 @@ sub AUTOLOAD
       return(0);
    }
 
+   if(grep { $_ eq 'Packet IDs' } @{$dispatch->{$command}->{serialSequence}})
+   {
+      if($dataBytes[0] != $#dataBytes) {
+	 print "Expected $dataBytes[0] Packet IDs, but received ", $#dataBytes, "\n";
+      }
+   }
+
    # Verify Data Byte Ranges
    if($dispatch->{$command}->{dataRange})
    {
