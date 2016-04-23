@@ -6,6 +6,11 @@ use strict;
 use Device::SerialPort;
 
 my $dispatch = {
+   Reset => {
+      serialSequence => [7],
+      minMode => 'Off',
+      setMode => 'Off'
+   },
    Start => {
       serialSequence => [128],
       setMode => 'Passive'
@@ -17,6 +22,11 @@ my $dispatch = {
       serialSequence => [128],
       setMode => 'Passive'
    },
+#   Baud => {
+#      serialSequence => [129,'Baud Code'],
+#      minMode => 'Passive',
+#      dataRange => [[0,11]]
+#   },
    Control => {
       serialSequence => [130],
       setMode => 'Passive'
@@ -25,6 +35,21 @@ my $dispatch = {
       serialSequence => [131],
       minMode => 'Passive',
       setMode => 'Safe',
+   },
+#   Full => {
+#      serialSequence => [132],
+#      minMode => 'Passive',
+#      setMode => 'Full'
+#   },
+   Power => {
+      serialSequence => [133],
+      minMode => 'Passive',
+      setMode => 'Passive'
+   },
+   Spot => {
+      serialSequence => [134],
+      minMode => 'Passive',
+      setMode => 'Passive'
    },
    Clean => {
       serialSequence => [135],
@@ -36,17 +61,35 @@ my $dispatch = {
       minMode => 'Passive',
       setMode => 'Passive'
    },
-   Spot => {
-      serialSequence => [134],
-      minMode => 'Passive',
-      setMode => 'Passive'
-   },
+#   Drive => {
+#      serialSequence => [137,'Velocity high byte','Velocity low byte','Radius high byte','Radius low byte'],
+#      minMode => 'Safe',
+#      dataRange => [[-500,500],[-500,500],[-2000,2000],[-2000,2000]]
+#   },
+#   Motors => {
+#      serialSequence => [138,'Motors'],
+#      minMode => 'Safe',
+#      code => ['Side Brush','Vacuum','Main Brush','Side Brush Direction','Main Brush Direction',undef,undef,undef]
+#   },
+#   LowSideDrivers => {
+#      serialSequence => [138,'Driver Bits'],
+#      minMode => 'Safe',
+#      code => ['Low Side Driver 0 (pin 23)','Low Side Driver 1 (pin 22)','Side Driver 2 (pin 24)']
+#   },
    LEDs => {
       serialSequence => [139,'LED Bits','Clean/Power Color','Clean/Power Intensity'],
       minMode => 'Safe',
       dataRange => [[0,15],[0,255],[0,255]],
       code => ['Debris','Spot','Dock','Check Robot'],
    },
+#   Song => {
+#      serialSequence => [140,'Song Number','Song Length','Note Number 1','Note Duration 1','Note Number 2','Note Duration 2'],
+#      minMode => 'Passive'
+#   },
+#   PlaySong => {
+#      serialSequence => [141,'Song Number'],
+#      minMode => 'Passive'
+#   },
    Sensors => {
       serialSequence => [142,'Packet ID'],
       minMode => 'Passive',
@@ -57,22 +100,77 @@ my $dispatch = {
       minMode => 'Passive',
       setMode => 'Passive'
    },
-   DriveDirect => {
-      serialSequence => [145,'Right velocity high byte','Right velocity low byte','Left velocity high byte','Left velocity low byte'],
-      minMode => 'Safe'
-   },
-#   Stream => {
-#      serialSequence => [148,'Number of Packets','Packet IDs'],
-#      minMode => 'Passive'
+#   PWMMotors => {
+#      serialSequence => [144,'Main Brush PWM','Side Brush PWM','Vacuum PWM'],
+#      minMode => 'Safe',
+#      dataRange => [[-127,127],[-127,127],[0,127]]
 #   },
+#   DriveDirect => {
+#      serialSequence => [145,'Right velocity high byte','Right velocity low byte','Left velocity high byte','Left velocity low byte'],
+#      minMode => 'Safe',
+#      dataRange => [[-255,-255],[-255,-255],[-255,255],[-255,255]]
+#   },
+#   DrivePWM => {
+#      serialSequence => [146,'Right PWM high byte','Right PWM low byte','Left PWM high byte','Left PWM low byte'],
+#      minMode => 'Safe',
+#      dataRange => [[-255,-255],[-255,-255],[-255,255],[-255,255]]
+#   },
+#   DigitalOutputs => {
+#      serialSequence => [147,'Output Bits'],
+#      minMode => 'Safe',
+#      code => ['digital-out-0 (pin 19)','digital-out-1 (pin 7)','digital-out-2 (pin 20)']
+#   },
+   Stream => {
+      serialSequence => [148,'Number of Packets','Packet IDs'],
+      minMode => 'Passive'
+   },
    QueryList => {
       serialSequence => [149,'Number of Packets','Packet IDs'],
       minMode => 'Passive'
    },
-#   PauseResumeStream => {
-#      serialSequence => [150,'Stream State'],
+   PauseResumeStream => {
+      serialSequence => [150,'Stream State'],
+      minMode => 'Passive',
+      dataRange => [[0,1]]
+   },
+#   SendIR => {
+#      serialSequence => [151,'Byte Value'],
+#      minMode => 'Safe',
+#      dataRange => [[0,255]]
+#   },
+#   Script => {
+#      serialSequence => [152,'Script Length','Opcodes'],
 #      minMode => 'Passive',
-#      dataRange => [[0-1]]
+#      dataRange => [[0,100]]
+#   },
+#   PlayScript => {
+#      serialSequence => [153],
+#      minMode => 'Passive'
+#   },
+#   ShowScript => {
+#      serialSequence => [154],
+#      minMode => 'Passive'
+#   },
+#   WaitTime => {
+#      serialSequence => [155,'Time'],
+#      minMode => 'Passive',
+#      dataRange => [[0,255]]
+#   },
+#   WaitDistance => {
+#      serialSequence => [156,'Distance High Byte','Distance Low Byte'],
+#      minMode => 'Passive',
+#      dataRange => [[-255,255],[-255,255],[-255,255],[-255,255]]
+#   },
+#   WaitAngle => {
+#      serialSequence => [157,'Angle High Byte','Angle Low Byte'],
+#      minMode => 'Passive',
+#      dataRange => [[-255,255],[-255,255],[-255,255],[-255,255]]
+#   },
+#   WaitEvent => {
+#      serialSequence => [158,'Event Number'],
+#      minMode => 'Passive',
+#      dataRange => [[-22,22]],
+#      code => [undef,'Wheel Drop','Front Wheel Drop','Left Wheel Drop','Right Wheel Drop','Bump','Left Bump','Right Bump','Virtual Wall','Wall','Cliff','Left Cliff','Front Left Cliff','Front Right Cliff','Right Cliff','Home Base','Advance Button','Play Button','Digital Input 0','Digital Input 1','Digital Input 2','Digital Input 3','OI Mode = Passive']
 #   },
    Schedule => {
       serialSequence => [167,'Days','Sun Hour','Sun Minute','Mon Hour','Mon Minute','Tue Hour','Tue Minute','Wed Hour','Wed Minute','Thu Hour','Thu Minute','Fri Hour','Fri Minute','Sat Hour','Sat Minute'],
@@ -85,10 +183,10 @@ my $dispatch = {
       minMode => 'Passive',
       code => ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
    },
-   Power => {
-      serialSequence => [133],
+   Stop => {
+      serialSequence => [173],
       minMode => 'Passive',
-      setMode => 'Passive'
+      setMode => 'Off'
    }
 };
 
@@ -156,7 +254,7 @@ my $sensors = {
    },
    ChargingState => {
       packetId => 21,
-      dataBytes => 2,
+      dataBytes => 1,
       code => ['Not Charging','Reconditioning Charging','Full Charging','Trickle Charging','Waiting','Charging Fault Condition']
    },
    Voltage => {
@@ -477,7 +575,7 @@ sub AUTOLOAD
 	    $numberOfPackets = shift(@dataBytes);
 	 }
 	 while($numberOfPackets) {
-	    my ($sensorName) = grep($sensors->{$_}->{packetId} eq $dataBytes[$numberOfPackets-1], keys $sensors);
+	    my ($sensorName) = grep($sensors->{$_}->{packetId} eq $dataBytes[$numberOfPackets-1], keys %$sensors);
 	    unless($sensorName) {
 	       print "Unknown Packet ID: $dataBytes[$numberOfPackets-1]\n";
 	       print "IRobot::ROI->AUTOLOAD($command) PUNT\n" if $self->{debug};
