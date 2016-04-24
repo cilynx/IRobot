@@ -1,5 +1,5 @@
 # IRobot
-Pure Perl implementation of the iRobot Roomba 500 Open Interface Spec.  Very much WIP.  LEDs are confirmed functional because I can play with those without waking up my family in the middle of the night =)
+Pure Perl implementation of the iRobot Roomba Open Interface Spec.  Most useful methods are working now, tested on a 500 series.  
 
 ```perl
 #!/usr/bin/perl 
