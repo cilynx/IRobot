@@ -36,11 +36,11 @@ my $dispatch = {
       minMode => 'Passive',
       setMode => 'Safe',
    },
-#   Full => {
-#      serialSequence => [132],
-#      minMode => 'Passive',
-#      setMode => 'Full'
-#   },
+   Full => {
+      serialSequence => [132],
+      minMode => 'Passive',
+      setMode => 'Full'
+   },
    Power => {
       serialSequence => [133],
       minMode => 'Passive',
@@ -61,21 +61,24 @@ my $dispatch = {
       minMode => 'Passive',
       setMode => 'Passive'
    },
-#   Drive => {
-#      serialSequence => [137,'Velocity high byte','Velocity low byte','Radius high byte','Radius low byte'],
-#      minMode => 'Safe',
-#      dataRange => [[-500,500],[-500,500],[-2000,2000],[-2000,2000]]
-#   },
-#   Motors => {
-#      serialSequence => [138,'Motors'],
-#      minMode => 'Safe',
-#      code => ['Side Brush','Vacuum','Main Brush','Side Brush Direction','Main Brush Direction',undef,undef,undef]
-#   },
-#   LowSideDrivers => {
-#      serialSequence => [138,'Driver Bits'],
-#      minMode => 'Safe',
-#      code => ['Low Side Driver 0 (pin 23)','Low Side Driver 1 (pin 22)','Side Driver 2 (pin 24)']
-#   },
+   Drive => {
+      serialSequence => [137,'Velocity high byte','Velocity low byte','Radius high byte','Radius low byte'],
+      minMode => 'Safe',
+      dataRange => [[0,255],[0,255],[0,255],[0,255]],
+      easySequence => ['Velocity','Radius'],
+      easyRange => [[-500,500],[-2000,2000]],
+      easyTransform => sub { unpack("C2",pack("n!",shift)) }
+   },
+   Motors => {
+      serialSequence => [138,'Motors'],
+      minMode => 'Safe',
+      code => ['Side Brush','Vacuum','Main Brush','Side Brush Direction','Main Brush Direction',undef,undef,undef]
+   },
+   LowSideDrivers => {
+      serialSequence => [138,'Driver Bits'],
+      minMode => 'Safe',
+      code => ['Low Side Driver 0 (pin 23)','Low Side Driver 1 (pin 22)','Side Driver 2 (pin 24)']
+   },
    LEDs => {
       serialSequence => [139,'LED Bits','Clean/Power Color','Clean/Power Intensity'],
       minMode => 'Safe',
@@ -100,16 +103,19 @@ my $dispatch = {
       minMode => 'Passive',
       setMode => 'Passive'
    },
-#   PWMMotors => {
-#      serialSequence => [144,'Main Brush PWM','Side Brush PWM','Vacuum PWM'],
-#      minMode => 'Safe',
-#      dataRange => [[-127,127],[-127,127],[0,127]]
-#   },
-#   DriveDirect => {
-#      serialSequence => [145,'Right velocity high byte','Right velocity low byte','Left velocity high byte','Left velocity low byte'],
-#      minMode => 'Safe',
-#      dataRange => [[-255,-255],[-255,-255],[-255,255],[-255,255]]
-#   },
+   PWMMotors => {
+      serialSequence => [144,'Main Brush PWM','Side Brush PWM','Vacuum PWM'],
+      minMode => 'Safe',
+      dataRange => [[-127,127],[-127,127],[0,127]]
+   },
+   DriveDirect => {
+      serialSequence => [145,'Right velocity high byte','Right velocity low byte','Left velocity high byte','Left velocity low byte'],
+      minMode => 'Safe',
+      dataRange => [[0,255],[0,255],[0,255],[0,255]],
+      easySequence => ['Right Velocity','Left Velocity'],
+      easyRange => [[-500,500],[-500,500]],
+      easyTransform => sub { unpack("C2",pack("n!",shift)) }
+   },
 #   DrivePWM => {
 #      serialSequence => [146,'Right PWM high byte','Right PWM low byte','Left PWM high byte','Left PWM low byte'],
 #      minMode => 'Safe',
@@ -516,15 +522,38 @@ sub AUTOLOAD
 
    my $opCode = ${$dispatch->{$command}->{serialSequence}}[0];
    my $requiredDataBytes = scalar @{$dispatch->{$command}->{serialSequence}} - 1;
+   my $easyInputs = scalar @{$dispatch->{$command}->{easySequence}} if($dispatch->{$command}->{easySequence});
 
    print "opCode: ", $opCode, "\n" if $self->{debug} > 1;
    print "dataBytes: ", $requiredDataBytes, "\n" if $self->{debug} > 1;
    print "minMode: ", $dispatch->{$command}->{minMode}, "\n" if $self->{debug} > 1;
 
    # Verify Data Length
-   unless(scalar @dataBytes == $requiredDataBytes || grep { $_ eq 'Packet IDs' } @{$dispatch->{$command}->{serialSequence}})
-   {
-      print "Expected $requiredDataBytes data bytes, but received ", scalar @dataBytes, "\n";
+   if(scalar @dataBytes == $requiredDataBytes) {
+      # We're in good shape with a traditional call.  Carry on.
+   } elsif(grep { $_ eq 'Packet IDs' } @{$dispatch->{$command}->{serialSequence}}) {
+      # We're in good shape with an unbounded call.  Carry on.
+   } elsif(scalar @dataBytes == $easyInputs) {
+      if($dispatch->{$command}->{easyRange}) {
+	 for my $x (0..$#dataBytes) {
+	    my $min = $dispatch->{$command}->{easyRange}[$x][0];
+	    my $max = $dispatch->{$command}->{easyRange}[$x][1];
+	    if($min > $dataBytes[$x] || $dataBytes[$x] > $max) {
+	       print "$dispatch->{$command}->{easySequence}[$x] ($dataBytes[$x]) is out of range ($min - $max)\n";
+	       print "IRobot::ROI->AUTOLOAD($command) PUNT\n" if $self->{debug};
+	       return(0);
+	    }
+	 }
+      }
+      my @easyDataBytes;
+      foreach (@dataBytes) { push(@easyDataBytes, $dispatch->{$command}->{easyTransform}->($_)); }
+      @dataBytes = @easyDataBytes;
+   } else {
+      if($easyInputs) {
+	 print "Expected $requiredDataBytes dataBytes or $easyInputs easyInputs, but received ", scalar @dataBytes, " parameters\n";
+      } else {
+	 print "Expected $requiredDataBytes data bytes, but received ", scalar @dataBytes, "\n";
+      }
       print "IRobot::ROI->AUTOLOAD($command) PUNT\n" if $self->{debug};
       return(0);
    }
