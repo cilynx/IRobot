@@ -5,41 +5,57 @@ package IRobot::ROI;
 use strict;
 use Device::SerialPort;
 
+my $spec = {
+   R500OI 	=> 'Roomba 500 Open Interface Specification',
+   COI2		=> 'Create Open Interface v2',
+};
+
 my $dispatch = {
    Reset => {
       serialSequence => [7],
       minMode => 'Off',
-      setMode => 'Off'
+      setMode => 'Off',
+      description => 'This command resets the robot, as if you had removed and reinserted the battery.',
+      spec => ['R500OI']
    },
    Start => {
       serialSequence => [128],
-      setMode => 'Passive'
+      setMode => 'Passive',
+      description => 'This command starts the OI.  You must always send the start command before sending any other commands to the OI.',
+      spec => ['COI2','R500OI']
    },
-   # There is no 'Passive' command in the spec, but this maintains the ability to call
-   # the mode you want as a method and not have to write a bunch of work-arounds just
-   # for 'Passive' mode.
    Passive => {
       serialSequence => [128],
-      setMode => 'Passive'
+      setMode => 'Passive',
+      description => "There is no 'Passive' command in the iRobot specs.  This method calls the Start method.  It's only here to make development easier.",
+      spec => ['COI2','R500OI']
    },
 #   Baud => {
 #      serialSequence => [129,'Baud Code'],
 #      minMode => 'Passive',
-#      dataRange => [[0,11]]
+#      dataRange => [[0,11]],
+#      description => "This command sets the baud rate in bits per second (bps) at which OI commands and data are sent according to the baud code sent in the data byte. The default baud rate at power up is 57600 bps, but the starting baud rate can be changed to 19200 by holding down the Play button while powering on Create until you hear a sequence of descending tones. Once the baud rate is changed, it persists until Create is power cycled by pressing the power button or removing the battery, or when the battery voltage falls below the minimum required for processor operation.  You must wait 100ms after sending this command before sending additional commands at the new baud rate.\n\nNote: at a baud rate of 115200, there must be at least 200μs between the onset of each character, or some characters may not be received.",
+#      spec => ['COI2','R500OI']
 #   },
    Control => {
       serialSequence => [130],
-      setMode => 'Passive'
+      setMode => 'Passive',
+      description => 'The effect and usage of the Control command (130) is identical to the Safe command. The Control command is deprecated but is present for backward compatibility with the Roomba Open Interface. Use Safe command instead.',
+      spec => ['COI2','R500OI']
    },
    Safe => {
       serialSequence => [131],
       minMode => 'Passive',
       setMode => 'Safe',
+      description => 'This command puts the OI into Safe mode, enabling user control of Roomba.  It turns off all LEDs.  The OI can be in Passive, Safe, or Full mode to accept this command.  If safety condition occurs, Roomba reverts automatically to Passive mode.',
+      spec => ['COI2','R500OI']
    },
    Full => {
       serialSequence => [132],
       minMode => 'Passive',
-      setMode => 'Full'
+      setMode => 'Full',
+      description => 'This command gives you complete control over Roomba by putting the OI into Full mode, and turning off the cliff, wheel-drop and internal charger safety feat ures.  That is, in Full mode, Roomba executes any command that you send it, even if the internal charge r is plugged in, or command triggers a cliff or wheel drop condition.',
+      spec => ['COI2','R500OI']
    },
    Power => {
       serialSequence => [133],
@@ -49,22 +65,42 @@ my $dispatch = {
    Spot => {
       serialSequence => [134],
       minMode => 'Passive',
-      setMode => 'Passive'
+      setMode => 'Passive',
+      spec => ['COI2','R500OI']
    },
    Clean => {
       serialSequence => [135],
       minMode => 'Passive',
       setMode => 'Passive'
    },
+   Cover => {
+      serialSequence => [135],
+      minMode => 'Passive',
+      setMode => 'Passive',
+      description => 'This command starts the Cover demo.',
+      spec => ['COI2']
+   },
    Max => {
       serialSequence => [136],
       minMode => 'Passive',
-      setMode => 'Passive'
+      setMode => 'Passive',
+      spec => ['R500OI']
+   },
+   Demo => {
+      serialSequence => [136,'Which-demo'],
+      minMode => 'Passive',
+      setMode => 'Passive',
+      description => 'This command starts the requested built-in demo.',
+      dataRange => [[-1,9]],
+      code => ['Cover','Cover and Dock','Spot Cover','Mouse','Figure Eight','Wimp','Home'],
+      spec => ['COI2']
    },
    Drive => {
       serialSequence => [137,'Velocity high byte','Velocity low byte','Radius high byte','Radius low byte'],
       minMode => 'Safe',
       dataRange => [[0,255],[0,255],[0,255],[0,255]],
+      description => "This command controls Create’s drive wheels. It takes four data bytes, interpreted as two 16-bit signed values using two’s complement. The first two bytes specify the average velocity of the drive wheels in millimeters per second (mm/s), with the high byte being sent first. The next two bytes specify the radius in millimeters at which Create will turn. The longer radii make Create drive straighter, while the shorter radii make Create turn more. The radius is measured from the center of the turning circle to the center of Create. A Drive command with a positive velocity and a positive radius makes Create drive forward while turning toward the left. A negative radius makes Create turn toward the right. Special cases for the radius make Create turn in place or drive straight, as specified below. A negative velocity makes Create drive backward.\n\nNOTE: Internal and environmental restrictions may prevent Create from accurately carrying out some drive commands.  For example, it may not be possible for Create to drive at full speed in an arc with a large radius of curvature.",
+      spec => ['COI2','R500OI'],
       easySequence => ['Velocity','Radius'],
       easyRange => [[-500,500],[-2000,2000]],
       easyTransform => sub { unpack("C2",pack("n!",shift)) }
@@ -72,18 +108,22 @@ my $dispatch = {
    Motors => {
       serialSequence => [138,'Motors'],
       minMode => 'Safe',
-      code => ['Side Brush','Vacuum','Main Brush','Side Brush Direction','Main Brush Direction',undef,undef,undef]
+      code => ['Side Brush','Vacuum','Main Brush','Side Brush Direction','Main Brush Direction',undef,undef,undef],
+      spec => ['R500OI']
    },
    LowSideDrivers => {
       serialSequence => [138,'Driver Bits'],
       minMode => 'Safe',
-      code => ['Low Side Driver 0 (pin 23)','Low Side Driver 1 (pin 22)','Side Driver 2 (pin 24)']
+      description => 'This command lets you control the three low side drivers.  The state of each driver is specified by one bit in the data byte.\n\nLow side drivers 0 and 1 can provide up to 0.5A of current.  Low side driver 2 can provide up to 1.5A of current.  If too much current is requested, the current is limited and the overcurrent flag is set (Sensor Packet 14).',
+      code => ['Low Side Driver 0 (pin 23)','Low Side Driver 1 (pin 22)','Side Driver 2 (pin 24)'],
+      spec => ['COI2']
    },
    LEDs => {
       serialSequence => [139,'LED Bits','Clean/Power Color','Clean/Power Intensity'],
       minMode => 'Safe',
       dataRange => [[0,15],[0,255],[0,255]],
       code => ['Debris','Spot','Dock','Check Robot'],
+      spec => ['COI2','R500OI'],
    },
 #   Song => {
 #      serialSequence => [140,'Song Number','Song Length','Note Number 1','Note Duration 1','Note Number 2','Note Duration 2'],
@@ -96,12 +136,21 @@ my $dispatch = {
    Sensors => {
       serialSequence => [142,'Packet ID'],
       minMode => 'Passive',
-      dataRange => [[0,107]]
+      dataRange => [[0,107]],
+      spec => ['R500OI']
    },
    SeekDock => {
       serialSequence => [143],
       minMode => 'Passive',
-      setMode => 'Passive'
+      setMode => 'Passive',
+      spec => ['R500OI']
+   },
+   CoverAndDock => {
+      serialSequence => [143],
+      minMode => 'Passive',
+      setMode => 'Passive',
+      description => 'This command starts the Cover and Dock demo.',
+      spec => ['COI2']
    },
    PWMMotors => {
       serialSequence => [144,'Main Brush PWM','Side Brush PWM','Vacuum PWM'],
@@ -112,6 +161,8 @@ my $dispatch = {
       serialSequence => [145,'Right velocity high byte','Right velocity low byte','Left velocity high byte','Left velocity low byte'],
       minMode => 'Safe',
       dataRange => [[0,255],[0,255],[0,255],[0,255]],
+      description => "This command lets you control the forward and backward motion of Create’s drive wheels independently. It takes four data bytes, which are interpreted as two 16-bit signed values using two’s complement. The first two bytes specify the velocity of the right wheel in millimeters per second (mm/s), with the high byte sent first. The next two bytes specify the velocity of the left wheel, in the same format.  A positive velocity makes that wheel drive forward, while a negative velocity makes it drive backward.",
+      spec => ['COI2','R500OI'],
       easySequence => ['Right Velocity','Left Velocity'],
       easyRange => [[-500,500],[-500,500]],
       easyTransform => sub { unpack("C2",pack("n!",shift)) }
@@ -121,11 +172,13 @@ my $dispatch = {
 #      minMode => 'Safe',
 #      dataRange => [[-255,-255],[-255,-255],[-255,255],[-255,255]]
 #   },
-#   DigitalOutputs => {
-#      serialSequence => [147,'Output Bits'],
-#      minMode => 'Safe',
-#      code => ['digital-out-0 (pin 19)','digital-out-1 (pin 7)','digital-out-2 (pin 20)']
-#   },
+   DigitalOutputs => {
+      serialSequence => [147,'Output Bits'],
+      minMode => 'Safe',
+      description => 'This command controls the state of the 3 digital output pins on the 25 pin Cargo Bay Connector.  The digital outputs can provide up to 20 mA of current.',
+      code => ['digital-out-0 (pin 19)','digital-out-1 (pin 7)','digital-out-2 (pin 20)'],
+      spec => ['COI2']
+   },
    Stream => {
       serialSequence => [148,'Number of Packets','Packet IDs'],
       minMode => 'Passive'
@@ -426,6 +479,30 @@ my $sensors = {
    }
 };
 
+sub Help($)
+{
+   my($self, $parm) = @_;
+   print "\n";
+   if($dispatch->{$parm}) {
+      print "$parm\n\n$dispatch->{$parm}->{description}\n";
+   } else {
+      my @commands;
+      foreach my $command (keys %$dispatch) {
+	 push(@commands, $command) if grep { $_ eq $parm } @{$dispatch->{$command}->{spec}};
+      }
+      if(@commands) {
+	 print "", $spec->{$parm}, ":\n\n", join(', ',sort @commands), "\n\nHelp [Command] for more details.\n";
+      } else {
+	 if($parm) {
+	    print "I don't know anything about '$parm'.\n";
+	 } else {
+	    print "Specifications:\n\n", join(', ', sort keys %$spec), "\n\nCommands:\n\n", join(', ', sort keys %$dispatch), "\n\nHelp [Spec / Command] for more details.\n";
+	 }
+      }
+   }
+   print "\n";
+}
+
 sub new($)
 {
    my $class = shift;
@@ -435,7 +512,7 @@ sub new($)
       autoMode	=> 0,
       ledBits	=> 0,
       color	=> 0,
-      intensity	=> 255
+      intensity	=> 255,
    };
    bless($self);
    return($self);
@@ -515,6 +592,16 @@ sub AUTOLOAD
 	 $command = 'Sensors';
       } else {
 	 print "Unknown command: $command\n";
+	 print "IRobot::ROI->AUTOLOAD($command) PUNT\n" if $self->{debug};
+	 return(0);
+      }
+   }
+
+   # Verify Spec
+   if($self->{spec})
+   {
+      unless(grep { $_ eq $self->{spec} } @{$dispatch->{$command}->{spec}}) {
+	 print "Command ($command) is not available in ", $spec->{$self->{spec}}, "\n";
 	 print "IRobot::ROI->AUTOLOAD($command) PUNT\n" if $self->{debug};
 	 return(0);
       }
