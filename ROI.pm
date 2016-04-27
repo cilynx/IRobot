@@ -122,12 +122,14 @@ my $dispatch = {
       serialSequence => [139,'LED Bits','Clean/Power Color','Clean/Power Intensity'],
       minMode => 'Safe',
       dataRange => [[0,15],[0,255],[0,255]],
+      description => "This command controls the LEDs on Create. The state of the Play and Advance LEDs is specified by two bits in the first data byte. The power LED is specified by two data bytes: one for the color and the other for the intensity.",
       code => ['Debris','Spot','Dock','Check Robot'],
       spec => ['COI2','R500OI'],
    },
 #   Song => {
 #      serialSequence => [140,'Song Number','Song Length','Note Number 1','Note Duration 1','Note Number 2','Note Duration 2'],
-#      minMode => 'Passive'
+#      minMode => 'Passive',
+#      spec => ['COI2','R500OI']
 #   },
 #   PlaySong => {
 #      serialSequence => [141,'Song Number'],
@@ -137,7 +139,8 @@ my $dispatch = {
       serialSequence => [142,'Packet ID'],
       minMode => 'Passive',
       dataRange => [[0,107]],
-      spec => ['R500OI']
+      description => "This command requests the OI to send a packet of sensor data bytes.  There are 43 different sensor data packets.  Each provides a value of a specific sensor or group of sensors.",
+      spec => ['COI2','R500OI']
    },
    SeekDock => {
       serialSequence => [143],
@@ -155,7 +158,14 @@ my $dispatch = {
    PWMMotors => {
       serialSequence => [144,'Main Brush PWM','Side Brush PWM','Vacuum PWM'],
       minMode => 'Safe',
-      dataRange => [[-127,127],[-127,127],[0,127]]
+      dataRange => [[-127,127],[-127,127],[0,127]],
+      spec => ['R500OI']
+   },
+   PWMLowSideDrivers => {
+      serialSequence => [144,'Low Side Driver 2 Duty Cycle','Low Side Driver 1 Duty Cycle','Low Side Driver 0 Duty Cycle'],
+      minMode => 'Safe',
+      dataRange => [[0,128],[0,128],[0,128]],
+      spec => ['COI2']
    },
    DriveDirect => {
       serialSequence => [145,'Right velocity high byte','Right velocity low byte','Left velocity high byte','Left velocity low byte'],
@@ -181,22 +191,30 @@ my $dispatch = {
    },
    Stream => {
       serialSequence => [148,'Number of Packets','Packet IDs'],
-      minMode => 'Passive'
+      minMode => 'Passive',
+      description => "This command starts a continuous stream of data packets.  The list of packets requested is sent every 15 ms, which is the rate iRobot Create uses to update data.\n\nThis is the best method of requesting sensor data if you are controlling Create over a wireless network (which has poor real-time characteristics) with software running on a desktop computer.",
+      spec => ['COI2','R500OI']
    },
    QueryList => {
       serialSequence => [149,'Number of Packets','Packet IDs'],
-      minMode => 'Passive'
+      minMode => 'Passive',
+      description => "This command lets you ask for a list of sensor packets.  The result is returned once, as in the Sensors command.  The robot returns the packets in the order you specify.\n\nExample:\n\nTo get the state of the left cliff sensor (packet 9) and the Virtual Wall detector (packet 13), send the following sequence: [149][2][9][13]",
+      spec => ['COI2','R500OI']
    },
    PauseResumeStream => {
       serialSequence => [150,'Stream State'],
       minMode => 'Passive',
-      dataRange => [[0,1]]
+      dataRange => [[0,1]],
+      description => "This command lets you stop and restart the stream without clearing the list of requested packets.",
+      spec => ['COI2','R500OI']
    },
-#   SendIR => {
-#      serialSequence => [151,'Byte Value'],
-#      minMode => 'Safe',
-#      dataRange => [[0,255]]
-#   },
+   SendIR => {
+      serialSequence => [151,'Byte Value'],
+      minMode => 'Safe',
+      dataRange => [[0,255]],
+      description => "This command sends the requested byte out of low side driver 1 (pin 23 on the Cargo Bay Connector), using the format expected by iRobot Create’s IR receiver. You must use a preload resistor (suggested value: 100 ohms) in parallel with the IR LED and its resistor in order turn it on.",
+      spec => ['CIO2']
+   },
 #   Script => {
 #      serialSequence => [152,'Script Length','Opcodes'],
 #      minMode => 'Passive',
